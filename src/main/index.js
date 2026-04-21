@@ -19,7 +19,7 @@ async function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    title: 'Twitch Clip Queue',
+    title: 'K3lPoke OBS Tools',
     backgroundColor: '#0e0e10',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),

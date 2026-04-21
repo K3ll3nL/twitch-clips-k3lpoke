@@ -1,16 +1,64 @@
 {
-  "name": "k3lpoke-marketplace",
+  "name": "k3lpoke-obs-tools",
   "version": "0.1.0",
-  "description": "K3lPoke marketplace — core infrastructure and apps",
+  "description": "K3lPoke OBS Tools — Twitch clip queue, overlay, and scene management",
   "author": "K3lPoke",
-  "private": true,
-  "packageManager": "npm@11.0.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "main": "out/main/index.js",
+  "type": "module",
   "scripts": {
-    "dev": "turbo run dev --filter=\"./apps/*\"",
-    "build": "turbo run build --filter=\"./apps/*\""
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.k3lpoke.obs-tools",
+    "productName": "K3lPoke OBS Tools",
+    "directories": {
+      "output": "dist"
+    },
+    "electronDist": "./node_modules/electron/dist",
+    "files": [
+      "out/**/*"
+    ],
+    "extraResources": [
+      { "from": "src/overlay", "to": "overlay" },
+      { "from": "src/dock",    "to": "dock"    }
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "K3lpoke",
+      "repo": "twitch-clips-k3lpoke"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "electron-updater": "^6.3.9",
+    "express": "^4.19.2",
+    "obs-websocket-js": "^5.0.3",
+    "ws": "^8.17.0"
   },
   "devDependencies": {
-    "turbo": "latest"
+    "@electron/packager": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "electron": "31.7.7",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "lucide-react": "^0.395.0",
+    "postcss": "^8.4.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1",
+    "tailwindcss": "^3.4.4"
   }
 }
