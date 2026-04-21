@@ -1,6 +1,6 @@
 {
   "name": "twitch-clips-k3lpoke",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Twitch clip queue manager with OBS Browser Source integration",
   "author": "K3lPoke",
   "main": "out/main/index.js",
