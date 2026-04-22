@@ -14,7 +14,11 @@ export function onOBSConnected(cb) { connectedCallback = cb }
 
 function emit(status) {
   connected = status.connected
-  statusCallback?.(status)
+  try {
+    statusCallback?.(status)
+  } catch {
+    // Ignore errors if window is destroyed during shutdown
+  }
 }
 
 // Register disconnect/error handlers once at module level so they survive
@@ -22,8 +26,12 @@ function emit(status) {
 obs.on('ConnectionClosed', () => { if (connected) emit({ connected: false }) })
 obs.on('ConnectionError',  () => { if (connected) emit({ connected: false }) })
 obs.on('error', () => {})
-obs.on('CurrentProgramSceneChanged', ({ sceneName }) => sceneChangedCallback?.(sceneName))
-obs.on('SceneListChanged', () => sceneListChangedCallback?.())
+obs.on('CurrentProgramSceneChanged', ({ sceneName }) => {
+  try { sceneChangedCallback?.(sceneName) } catch {}
+})
+obs.on('SceneListChanged', () => {
+  try { sceneListChangedCallback?.() } catch {}
+})
 
 export async function connectOBS({ host = 'localhost', port = 4455, password = '' } = {}) {
   try {
