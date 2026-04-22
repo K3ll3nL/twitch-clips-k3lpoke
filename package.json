@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "package": "npm run build && electron-builder --win"
+    "package": "npm run build && electron-builder --win",
+    "index": "node .claude/gen-index.js"
   },
   "build": {
     "appId": "com.k3lpoke.obs-tools",

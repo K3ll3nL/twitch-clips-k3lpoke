@@ -37,10 +37,12 @@ export default function RightPanel() {
 
   // Collections / playback source
   const [collections, setCollections] = useState([])
+  const [mainQueueCount, setMainQueueCount] = useState(0)
   const [playMode, setPlayMode] = useState('single')
   const [activeSingleId, setActiveSingleId] = useState('main')
   const [weightedSets, setWeightedSets] = useState([])
   const [configSaved, setConfigSaved] = useState(false)
+  const [nextClipMsg, setNextClipMsg] = useState(false)
 
   const allCollections = useMemo(() => [
     { id: 'main', name: 'Main Queue', color: '#9146ff' },
@@ -76,12 +78,19 @@ export default function RightPanel() {
     window.api.player.getNextClip().then(r => { if (r.ok) setNextClip(r.data) })
     window.api.player.onNextClip(clip => setNextClip(clip))
     window.api.collections.list().then(r => { if (r.ok) setCollections(r.data) })
+    window.api.clips.getQueue().then(r => { if (r.ok) setMainQueueCount(r.data.length) })
     window.api.playback.getConfig().then(r => {
       if (!r.ok) return
       setPlayMode(r.data.mode)
       setActiveSingleId(r.data.activeCollectionId || 'main')
       setWeightedSets(r.data.weightedSets || [])
     })
+    function onCollectionsChanged() {
+      window.api.collections.list().then(r => { if (r.ok) setCollections(r.data) })
+      window.api.clips.getQueue().then(r => { if (r.ok) setMainQueueCount(r.data.length) })
+    }
+    window.addEventListener('collections-changed', onCollectionsChanged)
+    return () => window.removeEventListener('collections-changed', onCollectionsChanged)
   }, [])
 
   async function saveNpVolume(val) {
@@ -174,6 +183,17 @@ export default function RightPanel() {
 
   const totalWeight = weightedSets.reduce((s, w) => s + w.weight, 0)
 
+  const showNowPlayingSource = useMemo(() => {
+    const customWithVideos = collections.filter(c => (c.clipCount ?? 0) > 0).length
+    const mainQualifies = mainQueueCount > 0
+    return (customWithVideos + (mainQualifies ? 1 : 0)) > 1
+  }, [collections, mainQueueCount])
+
+  function showNextClipMsg() {
+    setNextClipMsg(true)
+    setTimeout(() => setNextClipMsg(false), 3000)
+  }
+
   async function savePlaybackConfig() {
     await window.api.playback.setConfig({
       mode: playMode,
@@ -182,12 +202,14 @@ export default function RightPanel() {
     })
     setConfigSaved(true)
     setTimeout(() => setConfigSaved(false), 2000)
+    showNextClipMsg()
   }
 
   async function handleSingleSwitch(id) {
     setActiveSingleId(id)
     await window.api.playback.setConfig({ mode: 'single', activeCollectionId: id, weightedSets: [] })
     setPlayMode('single')
+    showNextClipMsg()
   }
 
   return (
@@ -346,8 +368,8 @@ export default function RightPanel() {
         )}
       </div>
 
-      {/* Now Playing Source */}
-      <div className="px-4 py-4 border-b border-twitch-border shrink-0">
+      {/* Now Playing Source — only when multiple qualifying collections exist */}
+      {showNowPlayingSource && <div className="px-4 py-4 border-b border-twitch-border shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-sm text-twitch-text flex items-center gap-1.5">
             <Layers size={15} /> Now Playing Source
@@ -437,7 +459,10 @@ export default function RightPanel() {
             </button>
           </div>
         )}
-      </div>
+        {nextClipMsg && (
+          <p className="text-[11px] text-twitch-muted mt-2">Changes will apply on the next clip.</p>
+        )}
+      </div>}
 
       {/* OBS Setup */}
       <div className="px-4 py-4 border-b border-twitch-border shrink-0">

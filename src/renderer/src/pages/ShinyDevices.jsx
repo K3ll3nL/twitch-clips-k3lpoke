@@ -1,30 +1,41 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Pencil, Check, X, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-function DeviceRow({ device, sources, sceneItems, onUpdate, onRemove }) {
-  const [editing, setEditing] = useState(false)
-  const [name, setName]       = useState(device.name)
-  const [source, setSource]   = useState(device.obsSourceName)
+function DeviceRow({ device, sources, obsScenes, onUpdate, onRemove }) {
+  const [editing, setEditing]       = useState(false)
+  const [name, setName]             = useState(device.name)
+  const [source, setSource]         = useState(device.obsSourceName)
+  const [shinyScene, setShinyScene] = useState(device.defaultShinyScene ?? '')
 
   async function save() {
-    await onUpdate(device.id, { name: name.trim() || device.name, obsSourceName: source })
+    await onUpdate(device.id, { name: name.trim() || device.name, obsSourceName: source, defaultShinyScene: shinyScene || null })
     setEditing(false)
   }
-  function cancel() { setName(device.name); setSource(device.obsSourceName); setEditing(false) }
-
-  const missingFromScene = device.obsSourceName && sceneItems.length > 0 && !sceneItems.includes(device.obsSourceName)
+  function cancel() { setName(device.name); setSource(device.obsSourceName); setShinyScene(device.defaultShinyScene ?? ''); setEditing(false) }
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2 p-3 bg-twitch-surface border border-twitch-purple rounded-lg">
-        <input value={name} onChange={e => setName(e.target.value)} className="flex-1 bg-twitch-mid border border-twitch-border rounded px-2 py-1 text-twitch-text text-sm outline-none focus:border-twitch-purple" autoFocus />
-        <select value={source} onChange={e => setSource(e.target.value)} className="flex-1 bg-twitch-mid border border-twitch-border rounded px-2 py-1 text-twitch-text text-sm">
-          {sources.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-          {source && !sources.find(s => s.name === source) && <option value={source}>{source}</option>}
-        </select>
-        <button onClick={save}   className="p-1.5 text-green-400 hover:bg-twitch-border rounded"><Check size={14} /></button>
-        <button onClick={cancel} className="p-1.5 text-twitch-muted hover:bg-twitch-border rounded"><X size={14} /></button>
+      <div className="p-3 bg-twitch-surface border border-twitch-purple rounded-lg space-y-2">
+        <div className="flex items-center gap-2">
+          <input value={name} onChange={e => setName(e.target.value)} className="flex-1 bg-twitch-mid border border-twitch-border rounded px-2 py-1 text-twitch-text text-sm outline-none focus:border-twitch-purple" autoFocus placeholder="Device name" />
+          <select value={source} onChange={e => setSource(e.target.value)} className="flex-1 bg-twitch-mid border border-twitch-border rounded px-2 py-1 text-twitch-text text-sm">
+            {sources.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+            {source && !sources.find(s => s.name === source) && <option value={source}>{source}</option>}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-twitch-muted text-xs shrink-0">Default shiny scene</label>
+          <select value={shinyScene} onChange={e => setShinyScene(e.target.value)} className="flex-1 bg-twitch-mid border border-twitch-border rounded px-2 py-1 text-twitch-text text-sm">
+            <option value="">None</option>
+            {obsScenes.map(s => <option key={s} value={s}>{s}</option>)}
+            {shinyScene && !obsScenes.includes(shinyScene) && <option value={shinyScene}>{shinyScene}</option>}
+          </select>
+        </div>
+        <div className="flex justify-end gap-1">
+          <button onClick={save}   className="p-1.5 text-green-400 hover:bg-twitch-border rounded"><Check size={14} /></button>
+          <button onClick={cancel} className="p-1.5 text-twitch-muted hover:bg-twitch-border rounded"><X size={14} /></button>
+        </div>
       </div>
     )
   }
@@ -34,13 +45,11 @@ function DeviceRow({ device, sources, sceneItems, onUpdate, onRemove }) {
       <div className="w-2 h-2 rounded-full bg-twitch-purple shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-twitch-text text-sm font-medium truncate">{device.name}</div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-twitch-muted text-xs truncate">{device.obsSourceName || <span className="italic">No source assigned</span>}</span>
-          {missingFromScene && (
-            <span className="flex items-center gap-1 text-amber-400 text-xs shrink-0">
-              <AlertTriangle size={11} /> Not in universal scene
-            </span>
-          )}
+        <div className="text-twitch-muted text-xs truncate">{device.obsSourceName || <span className="italic">No source</span>}</div>
+        <div className="text-twitch-muted text-xs truncate">
+          {device.defaultShinyScene
+            ? <span className="text-yellow-400/80">→ {device.defaultShinyScene}</span>
+            : <span className="italic">No default scene</span>}
         </div>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -53,22 +62,18 @@ function DeviceRow({ device, sources, sceneItems, onUpdate, onRemove }) {
 
 export default function ShinyDevices() {
   const navigate = useNavigate()
-  const [devices, setDevices]         = useState([])
-  const [sources, setSources]         = useState([])
-  const [sceneItems, setSceneItems]   = useState([])
-  const [obsScenes, setObsScenes]     = useState([])
-  const [universalScene, setUniversalScene] = useState('')
-  const [sceneSaved, setSceneSaved]   = useState(false)
-  const [name, setName]               = useState('')
-  const [source, setSource]           = useState('')
-  const [error, setError]             = useState('')
-  const [ready, setReady]             = useState(false)
+  const [devices, setDevices]   = useState([])
+  const [sources, setSources]   = useState([])
+  const [obsScenes, setObsScenes] = useState([])
+  const [name, setName]         = useState('')
+  const [source, setSource]     = useState('')
+  const [error, setError]       = useState('')
+  const [ready, setReady]       = useState(false)
 
   async function load() {
-    const [devRes, srcRes, uniRes, wizRes, scenesRes] = await Promise.all([
+    const [devRes, srcRes, wizRes, scenesRes] = await Promise.all([
       window.api.shiny.devices.list(),
       window.api.shiny.getSourceList(),
-      window.api.shiny.getUniversalScene(),
       window.api.settings.get('shinyWizardComplete'),
       window.api.obs.getScenes()
     ])
@@ -79,23 +84,7 @@ export default function ShinyDevices() {
       if (!source) setSource(srcRes.data[0]?.name ?? '')
     }
     if (scenesRes.ok) setObsScenes(scenesRes.data.scenes ?? [])
-    if (uniRes.ok && uniRes.data) {
-      setUniversalScene(uniRes.data)
-      const itemRes = await window.api.shiny.getSceneItemList(uniRes.data)
-      if (itemRes.ok) setSceneItems(itemRes.data.map(i => i.sourceName))
-    }
     setReady(true)
-  }
-
-  async function saveUniversalScene() {
-    if (!universalScene) return
-    const res = await window.api.shiny.setUniversalScene(universalScene)
-    if (res.ok) {
-      setSceneSaved(true)
-      setTimeout(() => setSceneSaved(false), 2000)
-      const itemRes = await window.api.shiny.getSceneItemList(universalScene)
-      if (itemRes.ok) setSceneItems(itemRes.data.map(i => i.sourceName))
-    }
   }
 
   useEffect(() => { load() }, [])
@@ -126,29 +115,6 @@ export default function ShinyDevices() {
       <p className="text-twitch-muted text-sm mb-6">Each device is a Nintendo Switch with an assigned OBS capture source.</p>
 
       <div className="bg-twitch-mid border border-twitch-border rounded-xl p-4 mb-6 space-y-3">
-        <h2 className="text-twitch-text text-sm font-medium">Universal Scene</h2>
-        <p className="text-twitch-muted text-xs">The OBS scene you switch to when you spot a shiny Pokémon.</p>
-        <div className="flex gap-2">
-          <select
-            value={universalScene}
-            onChange={e => setUniversalScene(e.target.value)}
-            className="flex-1 bg-twitch-surface border border-twitch-border rounded px-3 py-2 text-twitch-text text-sm"
-          >
-            {obsScenes.map(s => <option key={s} value={s}>{s}</option>)}
-            {universalScene && !obsScenes.includes(universalScene) && <option value={universalScene}>{universalScene}</option>}
-          </select>
-          <button
-            onClick={saveUniversalScene}
-            disabled={!universalScene}
-            className="bg-twitch-purple hover:bg-purple-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition-colors shrink-0"
-          >
-            {sceneSaved ? 'Saved!' : 'Save'}
-          </button>
-        </div>
-        {obsScenes.length === 0 && <p className="text-twitch-muted text-xs">OBS not connected — scene list unavailable.</p>}
-      </div>
-
-      <div className="bg-twitch-mid border border-twitch-border rounded-xl p-4 mb-6 space-y-3">
         <h2 className="text-twitch-text text-sm font-medium">Add Device</h2>
         <div className="flex gap-3">
           <input
@@ -170,7 +136,7 @@ export default function ShinyDevices() {
       <div className="space-y-2">
         {devices.length === 0 && <p className="text-twitch-muted text-sm text-center py-8">No devices yet.</p>}
         {devices.map(dev => (
-          <DeviceRow key={dev.id} device={dev} sources={sources} sceneItems={sceneItems} onUpdate={update} onRemove={remove} />
+          <DeviceRow key={dev.id} device={dev} sources={sources} obsScenes={obsScenes} onUpdate={update} onRemove={remove} />
         ))}
       </div>
     </div>

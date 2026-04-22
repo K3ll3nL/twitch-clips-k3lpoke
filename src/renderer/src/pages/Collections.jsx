@@ -159,6 +159,7 @@ export default function Collections() {
     if (r.ok) setCollections(r.data)
     const q = await window.api.clips.getQueue()
     if (q.ok) setApprovedCount(q.data.length)
+    window.dispatchEvent(new CustomEvent('collections-changed'))
   }
 
   useEffect(() => { loadCollections() }, [])
@@ -209,10 +210,25 @@ export default function Collections() {
   }
 
   async function handleRemoveClip(clipId) {
-    if (selectedId === 'main') return
+    if (selectedId === 'main') {
+      await window.api.clips.deny(clipId)
+      setClips(prev => prev.filter(c => c.id !== clipId))
+      loadCollections()
+      showUndo('Removed from queue', async () => {
+        await window.api.clips.approve(clipId)
+        loadSelectedClips()
+        loadCollections()
+      })
+      return
+    }
     await window.api.collections.removeClip(selectedId, clipId)
     setClips(prev => prev.filter(c => c.id !== clipId))
     loadCollections()
+    showUndo(`Removed from ${allCollections.find(c => c.id === selectedId)?.name}`, async () => {
+      await window.api.collections.addClip(selectedId, clipId)
+      loadSelectedClips()
+      loadCollections()
+    })
   }
 
   const draggingInCollectionIds = useMemo(() => {
@@ -249,6 +265,7 @@ export default function Collections() {
         setClips(prev => prev.filter(c => c.id !== clipId))
       }
       loadCollections()
+      if (targetColId === selectedId) loadSelectedClips()
       showUndo(`Added to ${targetName}`, async () => {
         await window.api.collections.removeClip(targetColId, clipId)
         if (sourceColId !== 'main') {
@@ -313,7 +330,7 @@ export default function Collections() {
                 />
               ) : (
                 <button
-                  onClick={() => { setSelectedId(col.id); setClips([]) }}
+                  onClick={() => setSelectedId(col.id)}
                   onDoubleClick={() => col.id !== 'main' && startRename(col)}
                   onDragOver={col.id !== 'main' ? e => { e.preventDefault(); setDragOverColId(col.id) } : undefined}
                   onDragLeave={col.id !== 'main' ? () => setDragOverColId(null) : undefined}
@@ -376,7 +393,7 @@ export default function Collections() {
             <ClipCard
               key={clip.id}
               clip={clip}
-              canRemove={selectedId !== 'main'}
+              canRemove={true}
               onRemove={() => handleRemoveClip(clip.id)}
               onDragStart={e => onDragStart(e, clip.id)}
               onDragEnd={onDragEnd}

@@ -62,6 +62,16 @@ export function initDb() {
   }
   if (migrated) save()
 
+  // Migrate shinyUniversalScene → per-device defaultShinyScene
+  const uni = data.settings.shinyUniversalScene
+  if (uni) {
+    let dirty = false
+    for (const dev of data.shinyDevices) {
+      if (!dev.defaultShinyScene) { dev.defaultShinyScene = uni; dirty = true }
+    }
+    if (dirty) save()
+  }
+
   // Remove clipIds that no longer exist in data.clips
   const knownIds = new Set(data.clips.map(c => c.id))
   let dirty = false
@@ -294,9 +304,9 @@ export function getAllSettings() {
 
 export function getShinyDevices() { return [...data.shinyDevices] }
 
-export function addShinyDevice({ name, obsSourceName }) {
+export function addShinyDevice({ name, obsSourceName, defaultShinyScene }) {
   const id = `sdev_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
-  const device = { id, name, obsSourceName }
+  const device = { id, name, obsSourceName, defaultShinyScene: defaultShinyScene ?? null }
   data.shinyDevices.push(device)
   const base = data.shinyLayouts.find(l => l.id === 'base')
   if (base) {
@@ -310,8 +320,9 @@ export function addShinyDevice({ name, obsSourceName }) {
 export function updateShinyDevice(id, changes) {
   const dev = data.shinyDevices.find(d => d.id === id)
   if (!dev) return null
-  if (changes.name          !== undefined) dev.name          = changes.name
-  if (changes.obsSourceName !== undefined) dev.obsSourceName = changes.obsSourceName
+  if (changes.name             !== undefined) dev.name             = changes.name
+  if (changes.obsSourceName    !== undefined) dev.obsSourceName    = changes.obsSourceName
+  if (changes.defaultShinyScene !== undefined) dev.defaultShinyScene = changes.defaultShinyScene ?? null
   save()
   return { ...dev }
 }
@@ -418,4 +429,23 @@ export function getShinyLayoutForScene(sceneName) {
 
 export function getActiveShinyLayout() {
   return getShinyLayoutForScene(null)
+}
+
+export function setShinyLayoutPositionScene(layoutId, deviceId, shinyScene) {
+  const layout = data.shinyLayouts.find(l => l.id === layoutId)
+  if (!layout) return null
+  const pos = (layout.positions ?? []).find(p => p.deviceId === deviceId)
+  if (!pos) return null
+  pos.shinyScene = shinyScene || null
+  save()
+  return { ...layout, positions: [...layout.positions] }
+}
+
+// Resolves the shiny scene for a device: layout position override > device default.
+export function resolveDeviceShinyScene(deviceId, currentOBSScene) {
+  const layout = getShinyLayoutForScene(currentOBSScene)
+  const pos = layout?.positions?.find(p => p.deviceId === deviceId)
+  if (pos?.shinyScene) return pos.shinyScene
+  const device = data.shinyDevices.find(d => d.id === deviceId)
+  return device?.defaultShinyScene ?? null
 }

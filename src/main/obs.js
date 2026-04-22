@@ -4,10 +4,12 @@ const obs = new OBSWebSocket()
 let connected = false
 let statusCallback = null
 let sceneChangedCallback = null
+let sceneListChangedCallback = null
 let connectedCallback = null
 
 export function onStatusChange(cb) { statusCallback = cb }
 export function onSceneChanged(cb) { sceneChangedCallback = cb }
+export function onSceneListChanged(cb) { sceneListChangedCallback = cb }
 export function onOBSConnected(cb) { connectedCallback = cb }
 
 function emit(status) {
@@ -21,6 +23,7 @@ obs.on('ConnectionClosed', () => { if (connected) emit({ connected: false }) })
 obs.on('ConnectionError',  () => { if (connected) emit({ connected: false }) })
 obs.on('error', () => {})
 obs.on('CurrentProgramSceneChanged', ({ sceneName }) => sceneChangedCallback?.(sceneName))
+obs.on('SceneListChanged', () => sceneListChangedCallback?.())
 
 export async function connectOBS({ host = 'localhost', port = 4455, password = '' } = {}) {
   try {
