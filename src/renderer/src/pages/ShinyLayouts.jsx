@@ -331,6 +331,11 @@ export default function ShinyLayouts() {
     if (res.ok) setLayouts(l => l.map(x => x.id === layoutId ? res.data : x))
   }
 
+  async function setPositionScene(layoutId, deviceId, shinyScene) {
+    const res = await window.api.shiny.layouts.setPositionScene(layoutId, deviceId, shinyScene)
+    if (res.ok) setLayouts(l => l.map(x => x.id === layoutId ? res.data : x))
+  }
+
   const selectedLayout = layouts.find(l => l.id === selected) ?? null
 
   return (
@@ -391,13 +396,42 @@ export default function ShinyLayouts() {
       <div className="flex-1 min-w-0 bg-twitch-mid border border-twitch-border rounded-xl p-5 overflow-auto">
         {!selectedLayout
           ? <div className="flex items-center justify-center h-full text-twitch-muted text-sm">Select or create a layout to edit it.</div>
-          : <CanvasEditor
-              layout={selectedLayout}
-              devices={devices}
-              onSetPosition={setPosition}
-              onReplacePositions={replacePositions}
-              onRemoveDevice={removeDevice}
-            />
+          : <>
+              <CanvasEditor
+                layout={selectedLayout}
+                devices={devices}
+                onSetPosition={setPosition}
+                onReplacePositions={replacePositions}
+                onRemoveDevice={removeDevice}
+              />
+              {selectedLayout.positions.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-twitch-border space-y-2">
+                  <p className="text-twitch-text text-sm font-medium">Scene overrides</p>
+                  <p className="text-twitch-muted text-xs">Override the shiny scene per device for this layout. Overrides take priority over device defaults.</p>
+                  <div className="space-y-2 mt-2">
+                    {selectedLayout.positions.map(pos => {
+                      const device = devices.find(d => d.id === pos.deviceId)
+                      if (!device) return null
+                      return (
+                        <div key={pos.deviceId} className="flex items-center gap-3">
+                          <span className="text-twitch-text text-xs w-28 shrink-0 truncate">{device.name}</span>
+                          <select
+                            value={pos.shinyScene ?? ''}
+                            onChange={e => setPositionScene(selectedLayout.id, pos.deviceId, e.target.value || null)}
+                            className="flex-1 bg-twitch-surface border border-twitch-border rounded px-2 py-1.5 text-twitch-text text-xs"
+                          >
+                            <option value="">{device.defaultShinyScene ? `Device default (${device.defaultShinyScene})` : 'Device default (not set)'}</option>
+                            {obsScenes.map(s => <option key={s} value={s}>{s}</option>)}
+                            {pos.shinyScene && !obsScenes.includes(pos.shinyScene) && <option value={pos.shinyScene}>{pos.shinyScene}</option>}
+                          </select>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {obsScenes.length === 0 && <p className="text-twitch-muted text-xs">OBS not connected — scene list unavailable.</p>}
+                </div>
+              )}
+            </>
         }
       </div>
     </div>

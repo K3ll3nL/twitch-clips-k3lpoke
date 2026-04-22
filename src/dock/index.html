@@ -75,15 +75,20 @@
         const w = pos.w ?? 45, h = pos.h ?? 45
         const el = document.createElement('div')
         el.className = 'tile' + (pos.deviceId === state.currentDeviceId ? ' active' : '')
-        // Map tile center from layout bounding-box space → px in dock
-        el.style.left   = (PAD + (pos.x - minX - w/2) / bw * dw) + 'px'
-        el.style.top    = (PAD + (pos.y - minY - h/2) / bh * dh) + 'px'
-        el.style.width  = (w / bw * dw) + 'px'
-        el.style.height = (h / bh * dh) + 'px'
+        // Map tile edges from layout bounding-box space → px in dock, using right-edge calculation
+        // to ensure adjacent tiles share exactly the same pixel edge (prevents sub-pixel gaps)
+        const tileLeft   = Math.round(PAD + (pos.x - minX - w/2) / bw * dw)
+        const tileTop    = Math.round(PAD + (pos.y - minY - h/2) / bh * dh)
+        const tileRight  = Math.round(PAD + (pos.x - minX + w/2) / bw * dw)
+        const tileBottom = Math.round(PAD + (pos.y - minY + h/2) / bh * dh)
+        el.style.left   = tileLeft + 'px'
+        el.style.top    = tileTop + 'px'
+        el.style.width  = (tileRight - tileLeft) + 'px'
+        el.style.height = (tileBottom - tileTop) + 'px'
         el.dataset.deviceId = pos.deviceId
         el.textContent = pos.device.name
         el.addEventListener('click', () => {
-          if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'show-device', deviceId: pos.deviceId }))
+          if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'show-device', deviceId: pos.deviceId, shinyScene: state.layout?.shinyScene }))
         })
         wrap.appendChild(el)
       }

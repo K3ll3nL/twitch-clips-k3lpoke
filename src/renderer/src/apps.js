@@ -29,7 +29,7 @@ export const APP_REGISTRY = [
     name: 'Quick Shiny Scene',
     tagline: 'Scene switcher for shiny hunters',
     description:
-      'Manage multiple Nintendo Switches for shiny Pokemon hunting. Assign OBS scenes to each device, build a physical grid layout, and get a one-click OBS dock to switch scenes instantly.',
+      'Cut the clutter from your shiny hunting stream. Assign your Switch capture sources, build a grid layout, and get a one-click OBS dock that instantly routes to your shiny highlight screen — so you never miss a frame when a shiny appears.',
     color: '#FFD700',
     gradient: 'from-yellow-400 to-amber-600',
     defaultRoute: '/shiny/devices',

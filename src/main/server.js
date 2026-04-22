@@ -6,7 +6,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { app as electronApp } from 'electron'
 import { getClipVideoUrl, receiveAuthToken } from './twitch.js'
-import { getClipsByStatus, getClipById, getSetting, getCollections, getPlaybackConfig, getShinyLayoutForScene, getShinyDevices } from './db.js'
+import { getClipsByStatus, getClipById, getSetting, getCollections, getPlaybackConfig, getShinyLayoutForScene, getShinyDevices, resolveDeviceShinyScene } from './db.js'
 import { showDeviceInScene } from './obs.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -133,10 +133,10 @@ wss.on('connection', (ws, req) => {
         const msg = JSON.parse(raw.toString())
         if (msg.type === 'show-device' && msg.deviceId) {
           const device = getShinyDevices().find(d => d.id === msg.deviceId)
-          const universalScene = getSetting('shinyUniversalScene')
-          if (device && universalScene) {
+          const shinyScene = resolveDeviceShinyScene(msg.deviceId, shinyCurrentScene)
+          if (device && shinyScene) {
             const allSources = getShinyDevices().map(d => d.obsSourceName).filter(Boolean)
-            showDeviceInScene({ universalScene, targetSourceName: device.obsSourceName, allDeviceSources: allSources })
+            showDeviceInScene({ universalScene: shinyScene, targetSourceName: device.obsSourceName, allDeviceSources: allSources })
               .then(() => {
                 shinyCurrentDeviceId = msg.deviceId
                 broadcastToDock({ type: 'device-shown', deviceId: msg.deviceId })

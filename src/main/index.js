@@ -6,7 +6,7 @@ import { initDb, getSetting, getShinyLayoutForScene } from './db.js'
 import { initTwitch } from './twitch.js'
 import { startServer, broadcastToOverlay, broadcastToDock, setShinyCurrentScene } from './server.js'
 import { registerIpcHandlers, runAutoFetch } from './ipc.js'
-import { onStatusChange, onSceneChanged, onOBSConnected, connectOBS } from './obs.js'
+import { onStatusChange, onSceneChanged, onSceneListChanged, onOBSConnected, connectOBS, getSceneList } from './obs.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const isDev = !app.isPackaged
@@ -22,7 +22,7 @@ async function createWindow() {
     title: 'K3lPoke OBS Tools',
     backgroundColor: '#0e0e10',
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.cjs'),
+      preload: path.resolve(__dirname, '../preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false  // allows Twitch embed iframes from localhost/file origins
@@ -90,6 +90,11 @@ app.whenReady().then(async () => {
       setShinyCurrentScene(sceneName)
       broadcastToDock({ type: 'scene-changed', sceneName, layout: getShinyLayoutForScene(sceneName) })
       win.webContents.send('obs:scene-changed', sceneName)
+    })
+
+    onSceneListChanged(async () => {
+      const sceneRes = await getSceneList()
+      win.webContents.send('obs:scene-list-changed', sceneRes)
     })
 
     // Hourly incremental clip fetch for all channels

@@ -86,68 +86,28 @@ function DockStep({ onNext }) {
   )
 }
 
-function UniversalSceneStep({ onNext }) {
-  const [scenes, setScenes] = useState([])
-  const [scene, setScene]   = useState('')
-  const [saved, setSaved]   = useState(false)
-  const [error, setError]   = useState('')
-
-  useEffect(() => {
-    window.api.obs.getScenes().then(res => {
-      if (res.ok) { setScenes(res.data.scenes); setScene(res.data.scenes[0] ?? '') }
-    })
-  }, [])
-
-  async function save() {
-    if (!scene) { setError('Pick a scene first'); return }
-    const res = await window.api.shiny.setUniversalScene(scene)
-    if (res.ok) setSaved(true)
-    else setError(res.error ?? 'Failed to save')
-  }
-
-  if (saved) return (
-    <div className="space-y-4">
-      <p className="text-green-400 text-sm flex items-center gap-2"><CheckCircle size={15} /> Universal scene set!</p>
-      <button onClick={onNext} className="bg-twitch-purple hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">Continue →</button>
-    </div>
-  )
-
-  return (
-    <div className="space-y-4">
-      <p className="text-twitch-muted text-sm">
-        Pick the OBS scene you switch to when you spot a shiny Pokémon. Quick Shiny Screen will route to this scene and show only the device you click.
-      </p>
-      <div className="space-y-1">
-        <label className="text-twitch-muted text-xs">Universal scene</label>
-        <select value={scene} onChange={e => setScene(e.target.value)} className="w-full bg-twitch-surface border border-twitch-border rounded px-3 py-2 text-twitch-text text-sm">
-          {scenes.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
-      {scenes.length === 0 && <p className="text-twitch-muted text-xs">No scenes found — make sure OBS is connected.</p>}
-      <button onClick={save} disabled={!scene} className="bg-twitch-purple hover:bg-purple-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition-colors">
-        Save →
-      </button>
-    </div>
-  )
-}
-
 function DeviceStep({ onNext }) {
-  const [sources, setSources] = useState([])
-  const [name, setName]       = useState('')
-  const [source, setSource]   = useState('')
-  const [saved, setSaved]     = useState(false)
-  const [error, setError]     = useState('')
+  const [sources, setSources]     = useState([])
+  const [obsScenes, setObsScenes] = useState([])
+  const [name, setName]           = useState('')
+  const [source, setSource]       = useState('')
+  const [shinyScene, setShinyScene] = useState('')
+  const [saved, setSaved]         = useState(false)
+  const [error, setError]         = useState('')
 
   useEffect(() => {
-    window.api.shiny.getSourceList().then(res => {
-      if (res.ok) { setSources(res.data); setSource(res.data[0]?.name ?? '') }
+    Promise.all([
+      window.api.shiny.getSourceList(),
+      window.api.obs.getScenes()
+    ]).then(([srcRes, scenesRes]) => {
+      if (srcRes.ok) { setSources(srcRes.data); setSource(srcRes.data[0]?.name ?? '') }
+      if (scenesRes.ok) { setObsScenes(scenesRes.data.scenes ?? []); setShinyScene(scenesRes.data.scenes[0] ?? '') }
     })
   }, [])
 
   async function save() {
     if (!name.trim()) { setError('Name is required'); return }
-    const res = await window.api.shiny.devices.add({ name: name.trim(), obsSourceName: source })
+    const res = await window.api.shiny.devices.add({ name: name.trim(), obsSourceName: source, defaultShinyScene: shinyScene || null })
     if (res.ok) setSaved(true)
     else setError(res.error ?? 'Failed to add device')
   }
@@ -161,7 +121,7 @@ function DeviceStep({ onNext }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-twitch-muted text-sm">Add your first Switch and assign the OBS capture source for its screen.</p>
+      <p className="text-twitch-muted text-sm">Add your first Switch, assign its capture source, and pick the OBS scene it should switch to when you spot a shiny.</p>
       <div className="space-y-1">
         <label className="text-twitch-muted text-xs">Device name</label>
         <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-twitch-surface border border-twitch-border rounded px-3 py-2 text-twitch-text text-sm outline-none focus:border-twitch-purple" placeholder="Switch 1" />
@@ -171,9 +131,16 @@ function DeviceStep({ onNext }) {
         <select value={source} onChange={e => setSource(e.target.value)} className="w-full bg-twitch-surface border border-twitch-border rounded px-3 py-2 text-twitch-text text-sm">
           {sources.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
         </select>
+        {sources.length === 0 && <p className="text-twitch-muted text-xs">No sources found — you can set this later.</p>}
+      </div>
+      <div className="space-y-1">
+        <label className="text-twitch-muted text-xs">Default shiny scene</label>
+        <select value={shinyScene} onChange={e => setShinyScene(e.target.value)} className="w-full bg-twitch-surface border border-twitch-border rounded px-3 py-2 text-twitch-text text-sm">
+          {obsScenes.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {obsScenes.length === 0 && <p className="text-twitch-muted text-xs">No scenes found — you can set this later.</p>}
       </div>
       {error && <p className="text-red-400 text-xs">{error}</p>}
-      {sources.length === 0 && <p className="text-twitch-muted text-xs">No sources found — you can add devices later.</p>}
       <div className="flex gap-3">
         <button onClick={save} className="bg-twitch-purple hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">Add Device</button>
         <button onClick={onNext} className="bg-twitch-surface border border-twitch-border hover:bg-twitch-border text-twitch-text text-sm px-4 py-2 rounded-lg transition-colors">Skip</button>
@@ -182,7 +149,7 @@ function DeviceStep({ onNext }) {
   )
 }
 
-const STEPS = ['OBS Connection', 'Dock Setup', 'Universal Scene', 'First Device']
+const STEPS = ['OBS Connection', 'Dock Setup', 'First Device']
 
 export default function ShinySetup({ obsConnected }) {
   const navigate = useNavigate()
@@ -222,10 +189,9 @@ export default function ShinySetup({ obsConnected }) {
           ))}
         </div>
 
-        {step === 0 && <OBSStep           onNext={next} />}
-        {step === 1 && <DockStep          onNext={next} />}
-        {step === 2 && <UniversalSceneStep onNext={next} />}
-        {step === 3 && <DeviceStep        onNext={finish} />}
+        {step === 0 && <OBSStep    onNext={next} />}
+        {step === 1 && <DockStep   onNext={next} />}
+        {step === 2 && <DeviceStep onNext={finish} />}
       </div>
     </div>
   )

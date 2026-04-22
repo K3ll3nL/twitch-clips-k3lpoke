@@ -15,7 +15,8 @@ import {
   getShinyDevices, addShinyDevice, updateShinyDevice, removeShinyDevice,
   getShinyLayouts, createShinyLayout, updateShinyLayout,
   setShinyLayoutPosition, replaceShinyLayoutPositions, removeDeviceFromShinyLayout, removeShinyLayout,
-  setActiveShinyLayout, getActiveShinyLayout, getShinyLayoutForScene
+  setActiveShinyLayout, getActiveShinyLayout, getShinyLayoutForScene,
+  setShinyLayoutPositionScene, resolveDeviceShinyScene
 } from './db.js'
 import {
   playClip, stopPlayer, getPlayerState, getNextClipState, broadcastSkipNext,
@@ -330,18 +331,16 @@ export function registerIpcHandlers(mainWindow) {
 
   // ── Shiny Hunt ────────────────────────────────────────────────────────────
 
-  handle('shiny:getDockUrl',        ()                => getDockUrl())
-  handle('shiny:getUniversalScene', ()                => getSetting('shinyUniversalScene'))
-  handle('shiny:setUniversalScene', ({ sceneName })   => { setSetting('shinyUniversalScene', sceneName) })
-  handle('shiny:getSourceList',     async ()          => getSourceList())
-  handle('shiny:getSceneItemList',  async ({ sceneName }) => getSceneItemList(sceneName))
+  handle('shiny:getDockUrl',       ()                    => getDockUrl())
+  handle('shiny:getSourceList',    async ()              => getSourceList())
+  handle('shiny:getSceneItemList', async ({ sceneName }) => getSceneItemList(sceneName))
 
   handle('shiny:showDevice', async ({ deviceId }) => {
-    const device       = getShinyDevices().find(d => d.id === deviceId)
-    const universalScene = getSetting('shinyUniversalScene')
-    if (!device || !universalScene) throw new Error('Device or universal scene not configured')
+    const device     = getShinyDevices().find(d => d.id === deviceId)
+    const shinyScene = resolveDeviceShinyScene(deviceId, null)
+    if (!device || !shinyScene) throw new Error('Device or shiny scene not configured')
     const allDeviceSources = getShinyDevices().map(d => d.obsSourceName).filter(Boolean)
-    await showDeviceInScene({ universalScene, targetSourceName: device.obsSourceName, allDeviceSources })
+    await showDeviceInScene({ universalScene: shinyScene, targetSourceName: device.obsSourceName, allDeviceSources })
   })
 
   handle('shiny:devices:list',   ()                => getShinyDevices())
@@ -359,6 +358,7 @@ export function registerIpcHandlers(mainWindow) {
   handle('shiny:layouts:setActive',        ({ id })                    => { setActiveShinyLayout(id); notifyShinyLayoutChanged() })
   handle('shiny:layouts:getActive',        ()                          => getActiveShinyLayout())
   handle('shiny:layouts:getForScene',      ({ sceneName })             => getShinyLayoutForScene(sceneName))
+  handle('shiny:layouts:setPositionScene', ({ id, deviceId, shinyScene }) => { const r = setShinyLayoutPositionScene(id, deviceId, shinyScene); notifyShinyLayoutChanged(); return r })
 
   // ── Updates ────────────────────────────────────────────────────────────────
 
