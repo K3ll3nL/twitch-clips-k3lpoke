@@ -34,7 +34,7 @@ export const APP_REGISTRY = [
     gradient: 'from-yellow-400 to-amber-600',
     defaultRoute: '/shiny/devices',
     core: true,
-    version: '0.1.1',
+    version: '0.2.0',
     navItems: [
       { to: '/shiny/devices', icon: Monitor,    label: 'Devices' },
       { to: '/shiny/layouts', icon: LayoutGrid, label: 'Layouts' },

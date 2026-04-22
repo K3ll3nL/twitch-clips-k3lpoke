@@ -4,12 +4,15 @@ import { fileURLToPath } from 'url'
 import { autoUpdater } from 'electron-updater'
 import { initDb, getSetting, getShinyLayoutForScene } from './db.js'
 import { initTwitch } from './twitch.js'
-import { startServer, broadcastToOverlay, broadcastToDock, setShinyCurrentScene } from './server.js'
+import { startServer, broadcastToOverlay, broadcastToDock, setShinyCurrentScene, closeServer } from './server.js'
 import { registerIpcHandlers, runAutoFetch } from './ipc.js'
-import { onStatusChange, onSceneChanged, onSceneListChanged, onOBSConnected, connectOBS, getSceneList } from './obs.js'
+import { onStatusChange, onSceneChanged, onSceneListChanged, onOBSConnected, connectOBS, getSceneList, disconnectOBS } from './obs.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const isDev = !app.isPackaged
+
+// Set userData path to use package name, not repo folder name
+app.setPath('userData', path.join(app.getPath('appData'), 'k3lpoke-obs-tools'))
 
 let mainWindow
 
@@ -115,8 +118,10 @@ app.whenReady().then(async () => {
   }
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   broadcastToOverlay({ type: 'stop' })
+  await disconnectOBS().catch(() => {})
+  await closeServer().catch(() => {})
 })
 
 app.on('window-all-closed', () => {

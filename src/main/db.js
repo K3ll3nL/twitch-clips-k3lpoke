@@ -44,7 +44,7 @@ export function initDb() {
   const currentDeviceIds = new Set(data.shinyDevices.map(d => d.id))
   const basePositionIds = new Set((base?.positions ?? []).map(p => p.deviceId))
   const baseNeedsUpdate = base && (
-    base.positions?.some(p => (p.w ?? 0) >= 10) ||  // pixel-based migration
+    base.positions?.some(p => (p.w ?? 0) > 100) ||  // pixel-based migration
     ![...currentDeviceIds].every(id => basePositionIds.has(id)) ||  // missing new devices
     ![...basePositionIds].every(id => currentDeviceIds.has(id))  // removed devices
   )
@@ -60,7 +60,7 @@ export function initDb() {
   let migrated = false
   for (const layout of data.shinyLayouts) {
     if (layout.id === 'base') continue
-    if (layout.positions?.some(p => (p.w ?? 0) >= 10)) {
+    if (layout.positions?.some(p => (p.w ?? 0) > 100)) {
       layout.positions = layout.positions.map(p => ({ ...p, w: Math.min((p.w ?? 140) / 6, 40), h: Math.min((p.h ?? 78) / 3.375, 40) }))
       migrated = true
     }

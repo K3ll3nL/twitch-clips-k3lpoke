@@ -1,6 +1,6 @@
 {
   "name": "k3lpoke-obs-tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "K3lPoke OBS Tools — Twitch clip queue, overlay, and scene management",
   "author": "K3lPoke",
   "main": "out/main/index.js",
@@ -22,8 +22,14 @@
       "out/**/*"
     ],
     "extraResources": [
-      { "from": "src/overlay", "to": "overlay" },
-      { "from": "src/dock",    "to": "dock"    }
+      {
+        "from": "src/overlay",
+        "to": "overlay"
+      },
+      {
+        "from": "src/dock",
+        "to": "dock"
+      }
     ],
     "publish": {
       "provider": "github",
@@ -31,7 +37,21 @@
       "repo": "twitch-clips-k3lpoke"
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "K3lPoke OBS Tools"
     },
     "mac": {
       "target": "dmg"
@@ -55,11 +75,14 @@
     "electron": "31.7.7",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
+    "icojs": "^0.22.1",
     "lucide-react": "^0.395.0",
     "postcss": "^8.4.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",
-    "tailwindcss": "^3.4.4"
+    "sharp": "^0.34.5",
+    "tailwindcss": "^3.4.4",
+    "to-ico": "^1.1.5"
   }
 }

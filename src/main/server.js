@@ -234,6 +234,11 @@ export function startServer() {
   })
 }
 
+export function closeServer() {
+  wss.clients.forEach(ws => ws.close())
+  return new Promise(resolve => httpServer.close(resolve))
+}
+
 export function getOverlayUrl() {
   return `http://localhost:${PORT}/overlay/index.html`
 }
