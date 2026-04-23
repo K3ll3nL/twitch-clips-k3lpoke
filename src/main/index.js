@@ -70,12 +70,19 @@ app.whenReady().then(async () => {
     registerIpcHandlers(win)
 
     // Setup auto-updater
-    autoUpdater.checkForUpdatesAndNotify().catch(() => {})
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      console.error('Update check failed:', err.message)
+    })
     autoUpdater.on('update-available', () => {
+      console.log('Update available detected')
       win.webContents.send('app:update-available')
     })
     autoUpdater.on('update-downloaded', () => {
+      console.log('Update downloaded')
       win.webContents.send('app:update-ready')
+    })
+    autoUpdater.on('error', (err) => {
+      console.error('Auto-updater error:', err.message)
     })
 
     onStatusChange((status) => {
