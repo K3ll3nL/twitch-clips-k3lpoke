@@ -17,7 +17,7 @@ export const APP_REGISTRY = [
     gradient: 'from-violet-600 to-purple-800',
     defaultRoute: '/updates',
     core: true,
-    version: '1.0.1',
+    version: '1.0.2',
     navItems: [
       { to: '/updates',     icon: Bell,           label: 'Updates'     },
       { to: '/review',      icon: ClipboardCheck, label: 'Review'      },
@@ -50,7 +50,7 @@ export const APP_REGISTRY = [
     gradient: 'from-yellow-400 to-amber-600',
     defaultRoute: '/shiny/devices',
     core: true,
-    version: '0.2.0',
+    version: '0.2.1',
     navItems: [
       { to: '/shiny/devices', icon: Monitor,    label: 'Devices' },
       { to: '/shiny/layouts', icon: LayoutGrid, label: 'Layouts' },
