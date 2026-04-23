@@ -55,6 +55,7 @@ export default function UndoToast() {
   function openColMenu(e) {
     e.preventDefault()
     e.stopPropagation()
+    resetTimer()
     if (!tagBtnRef.current) return
     const rect = tagBtnRef.current.getBoundingClientRect()
     const estimated = Math.min((collections?.length ?? 0) * 38 + 48, 280)
@@ -67,6 +68,7 @@ export default function UndoToast() {
   }
 
   async function toggleCollection(colId) {
+    resetTimer()
     const clipIds = toast?.clipIds ?? []
     if (memberOf.has(colId)) {
       for (const id of clipIds) await window.api.collections.removeClip(colId, id)
@@ -79,6 +81,7 @@ export default function UndoToast() {
   }
 
   async function handleCollectionCreated(newCol) {
+    resetTimer()
     setCollections(prev => [...prev, newCol])
     const clipIds = toast?.clipIds ?? []
     for (const id of clipIds) await window.api.collections.addClip(newCol.id, id)
@@ -92,6 +95,13 @@ export default function UndoToast() {
     setShowColMenu(false)
     setVisible(false)
     setTimeout(() => setToast(null), 300)
+  }
+
+  function resetTimer() {
+    clearTimeout(timerRef.current)
+    if (toast) {
+      timerRef.current = setTimeout(() => dismiss(), toast.duration)
+    }
   }
 
   function handleUndo() {
@@ -164,6 +174,7 @@ export default function UndoToast() {
       {showColMenu && colMenuPos && collections && collections.length > 0 && (
         <div
           ref={colMenuRef}
+          onClick={resetTimer}
           style={{ position: 'fixed', right: colMenuPos.right, top: colMenuPos.top, zIndex: 1000 }}
           className="w-48 bg-twitch-mid border border-twitch-border rounded-lg shadow-xl py-1 pointer-events-auto"
         >
