@@ -37,8 +37,11 @@ export default function Nav({ obsConnected, twitchUser, subscribedIds }) {
         <button
           onClick={openSwitcher}
           title="Switch app"
-          className="w-10 h-10 rounded-xl bg-twitch-purple flex items-center justify-center mb-2 shrink-0 hover:brightness-110 transition-all active:scale-95"
-          style={spinning ? { animation: `k3lNavSpin ${SPIN_DURATION}ms cubic-bezier(0.34, 1.56, 0.64, 1) both` } : {}}
+          className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 shrink-0 hover:brightness-110 transition-all active:scale-95"
+          style={{
+            background: currentApp?.color || '#9146FF',
+            animation: spinning ? `k3lNavSpin ${SPIN_DURATION}ms cubic-bezier(0.34, 1.56, 0.64, 1) both` : 'none'
+          }}
         >
 
 
@@ -65,9 +68,12 @@ export default function Nav({ obsConnected, twitchUser, subscribedIds }) {
               className={({ isActive }) =>
                 `w-10 h-10 rounded-lg flex items-center justify-center transition-colors ` +
                 (isActive
-                  ? 'bg-twitch-purple text-white'
+                  ? 'text-white'
                   : 'text-twitch-muted hover:bg-twitch-surface hover:text-twitch-text')
               }
+              style={({ isActive }) => ({
+                background: isActive ? (currentApp?.color || '#9146FF') : 'transparent'
+              })}
             >
               <Icon size={18} />
             </NavLink>

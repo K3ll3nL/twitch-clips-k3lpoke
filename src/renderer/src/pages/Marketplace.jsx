@@ -74,7 +74,7 @@ export default function Marketplace({ subscribedIds, onSubscriptionChange }) {
                           boxShadow: `0 4px 14px ${app.color}40`,
                         }}
                       >
-                        {app.name[0]}
+                        {app.image ? app.image() : app.name[0]}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">

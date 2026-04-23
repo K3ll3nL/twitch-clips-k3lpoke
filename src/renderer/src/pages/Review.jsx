@@ -11,7 +11,7 @@ function duration(secs) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function ClipRow({ clip, onStatusChange, collections, onCollectionsChanged, selected, onToggleSelect, clipIndex, selectionActive }) {
+const ClipRow = React.memo(function ClipRow({ clip, onStatusChange, collections, onCollectionsChanged, selected, onToggleSelect, clipIndex, selectionActive }) {
   const [expanded, setExpanded] = useState(false)
   const [videoUrl, setVideoUrl] = useState(null)
   const [loadingUrl, setLoadingUrl] = useState(false)
@@ -108,6 +108,7 @@ function ClipRow({ clip, onStatusChange, collections, onCollectionsChanged, sele
     const oldStatus = clip.status
     await window.api.clips.approve(clip.id)
     onStatusChange(clip.id, 'approved')
+    setExpanded(false)
     showUndo('Clip approved', async () => {
       await window.api.clips.setStatus(clip.id, oldStatus)
       onStatusChange(clip.id, oldStatus)
@@ -118,6 +119,7 @@ function ClipRow({ clip, onStatusChange, collections, onCollectionsChanged, sele
     const oldStatus = clip.status
     await window.api.clips.deny(clip.id)
     onStatusChange(clip.id, 'denied')
+    setExpanded(false)
     showUndo('Clip denied', async () => {
       await window.api.clips.setStatus(clip.id, oldStatus)
       onStatusChange(clip.id, oldStatus)
@@ -291,7 +293,7 @@ function ClipRow({ clip, onStatusChange, collections, onCollectionsChanged, sele
       )}
     </div>
   )
-}
+})
 
 export default function Review() {
   const [channels, setChannels] = useState([])
@@ -304,6 +306,8 @@ export default function Review() {
   const [gameFilter, setGameFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [collections, setCollections] = useState([])
+  const [displayCount, setDisplayCount] = useState(20)
+  const sentinelRef = useRef(null)
 
   // Selection
   const [selectedIds, setSelectedIds] = useState(new Set())
@@ -335,6 +339,18 @@ export default function Review() {
   }, [])
 
   useEffect(() => { if (selectedChannel) loadClips() }, [selectedChannel])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setDisplayCount(prev => prev + 20)
+      }
+    }, { rootMargin: '200px' })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   async function loadClips() {
     setLoading(true)
@@ -569,7 +585,7 @@ export default function Review() {
               {filteredClips.length} clip{filteredClips.length !== 1 ? 's' : ''}{(search || creatorFilter) ? ' (filtered)' : ''}
             </p>
           )}
-          {filteredClips.map((clip, idx) => (
+          {filteredClips.slice(0, displayCount).map((clip, idx) => (
             <ClipRow
               key={`${clip.id}-${sortBy}-${search}-${creatorFilter}-${gameFilter}-${statusFilter}-${selectedChannel}`}
               clip={clip}
@@ -582,6 +598,7 @@ export default function Review() {
               selectionActive={selectionActive}
             />
           ))}
+          <div ref={sentinelRef} className="h-2" />
         </div>
       </div>
     </div>

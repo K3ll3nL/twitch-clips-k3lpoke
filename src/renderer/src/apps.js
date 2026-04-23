@@ -43,10 +43,10 @@ export const APP_REGISTRY = [
   {
     id: 'quick-shiny-scene',
     name: 'Quick Shiny Scene',
-    tagline: 'Scene switcher for shiny hunters',
+    tagline: 'OBS Scene switcher for shiny hunters',
     description:
       'Cut the clutter from your shiny hunting stream. Assign your Switch capture sources, build a grid layout, and get a one-click OBS dock that instantly routes to your shiny highlight screen — so you never miss a frame when a shiny appears.',
-    color: '#FFD700',
+    color: '#facc15',
     gradient: 'from-yellow-400 to-amber-600',
     defaultRoute: '/shiny/devices',
     core: true,
@@ -55,6 +55,21 @@ export const APP_REGISTRY = [
       { to: '/shiny/devices', icon: Monitor,    label: 'Devices' },
       { to: '/shiny/layouts', icon: LayoutGrid, label: 'Layouts' },
     ],
+    image: () => React.createElement('svg', {
+      width: '20',
+      height: '20',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'white',
+      strokeWidth: '2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round'
+    }, [
+      React.createElement('rect', { key: 'monitor', x: '2', y: '3', width: '20', height: '14', rx: '2' }),
+      React.createElement('path', { key: 'stand', d: 'M 8 17 L 8 21 M 16 17 L 16 21 M 7 21 L 17 21' }),
+      React.createElement('path', { key: 'sparkle1', d: 'M 16 8 L 17 9 L 16 10 L 15 9 Z', fill: 'white' }),
+      React.createElement('path', { key: 'sparkle2', d: 'M 14 6 L 14.5 7 L 14 8 L 13.5 7 Z', fill: 'white' }),
+    ])
   },
   {
     id: 'alert-manager',

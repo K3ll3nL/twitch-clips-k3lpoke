@@ -9,7 +9,7 @@ function duration(secs) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function ClipRow({ clip, onStatusChange, collections, selected, onToggleSelect, clipIndex, selectionActive }) {
+const ClipRow = React.memo(function ClipRow({ clip, onStatusChange, collections, selected, onToggleSelect, clipIndex, selectionActive }) {
   const [expanded, setExpanded] = useState(false)
   const [videoUrl, setVideoUrl] = useState(null)
   const [loadingUrl, setLoadingUrl] = useState(false)
@@ -211,7 +211,7 @@ function ClipRow({ clip, onStatusChange, collections, selected, onToggleSelect, 
       )}
     </div>
   )
-}
+})
 
 export default function Updates() {
   const [clips, setClips] = useState([])
@@ -222,6 +222,8 @@ export default function Updates() {
   const [lastCheck, setLastCheck] = useState(null)
   const lastCheckRef = useRef(null)
   const [collections, setCollections] = useState([])
+  const [displayCount, setDisplayCount] = useState(20)
+  const sentinelRef = useRef(null)
 
   // Selection
   const [selectedIds, setSelectedIds] = useState(new Set())
@@ -260,6 +262,23 @@ export default function Updates() {
     })
   }, [load])
 
+  useEffect(() => {
+    setDisplayCount(20)
+  }, [clips])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && displayCount < clips.length) {
+        setDisplayCount(prev => Math.min(prev + 20, clips.length))
+      }
+    }, { rootMargin: '200px' })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [displayCount, clips.length])
+
+
   async function handleRefresh() {
     setFetching(true)
     setFetchResults(null)
@@ -285,6 +304,7 @@ export default function Updates() {
     setClips([])
     setFetchResults(null)
     setSelectedIds(new Set())
+    setDisplayCount(20)
     lastSelIdxRef.current = null
   }
 
@@ -293,6 +313,7 @@ export default function Updates() {
     await window.api.clips.bulkApprove(ids)
     setClips([])
     setSelectedIds(new Set())
+    setDisplayCount(20)
   }
 
   async function denyAll() {
@@ -300,6 +321,7 @@ export default function Updates() {
     await window.api.clips.bulkDeny(ids)
     setClips([])
     setSelectedIds(new Set())
+    setDisplayCount(20)
   }
 
   function handleStatusChange(id) {
@@ -465,7 +487,7 @@ export default function Updates() {
             </div>
           )}
 
-          {clips.map((clip, idx) => (
+          {clips.slice(0, displayCount).map((clip, idx) => (
             <ClipRow
               key={clip.id}
               clip={clip}
@@ -477,6 +499,7 @@ export default function Updates() {
               selectionActive={selectionActive}
             />
           ))}
+          <div ref={sentinelRef} className="h-2" />
         </div>
       </div>
     </div>

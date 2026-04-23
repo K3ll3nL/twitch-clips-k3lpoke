@@ -65,12 +65,13 @@ export default function AppSwitcher({ subscribedIds, onClose }) {
               className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-left w-56 transition-colors
                 ${active
-                  ? 'bg-twitch-purple/20 text-twitch-text'
+                  ? 'text-twitch-text'
                   : available
                     ? 'hover:bg-twitch-surface text-twitch-muted hover:text-twitch-text'
                     : 'text-twitch-border cursor-not-allowed'
                 }
               `}
+              style={active ? { background: `${app.color}20` } : {}}
             >
               {/* Color dot / icon */}
               <div
@@ -82,7 +83,7 @@ export default function AppSwitcher({ subscribedIds, onClose }) {
                   boxShadow: available ? `0 2px 8px ${app.color}40` : 'none',
                 }}
               >
-                {app.name[0]}
+                {app.image ? app.image() : app.name[0]}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -91,7 +92,7 @@ export default function AppSwitcher({ subscribedIds, onClose }) {
               </div>
 
               {active && (
-                <div className="w-1.5 h-1.5 rounded-full bg-twitch-purple shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: app.color }} />
               )}
               {!available && (
                 <span className="text-[9px] text-twitch-border shrink-0">Soon</span>
