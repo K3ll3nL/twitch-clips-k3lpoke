@@ -42,7 +42,8 @@ contextBridge.exposeInMainWorld('api', {
   channels: {
     list: () => invoke('channels:list'),
     add: (name, isOwn) => invoke('channels:add', { name, isOwn }),
-    remove: (name) => invoke('channels:remove', { name })
+    remove: (name) => invoke('channels:remove', { name }),
+    search: (query) => invoke('channels:search', { query })
   },
 
   // OBS

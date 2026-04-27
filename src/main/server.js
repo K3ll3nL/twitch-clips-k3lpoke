@@ -14,6 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const PORT = 1102
 const app = express()
 const httpServer = createServer(app)
+httpServer.setMaxListeners(0) // Unlimited; many WebSocket connections add error listeners
 const wss = new WebSocketServer({ server: httpServer })
 
 app.use(cors())

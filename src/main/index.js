@@ -26,7 +26,7 @@ async function createWindow() {
     title: 'K3lPoke OBS Tools',
     backgroundColor: '#0e0e10',
     webPreferences: {
-      preload: path.resolve(__dirname, '../preload/preload.cjs'),
+      preload: path.resolve(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false  // allows Twitch embed iframes from localhost/file origins

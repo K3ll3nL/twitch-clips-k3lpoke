@@ -118,6 +118,42 @@ export async function fetchUserByLogin(login) {
   return data.data[0] ?? null
 }
 
+export async function searchChannels(query) {
+  if (!query || query.length < 2) return []
+  const data = await apiGet('/search/channels', { query, first: 50 })
+  const q = query.toLowerCase()
+
+  const results = data.data.map(ch => ({
+    id: ch.id,
+    login: ch.broadcaster_login,
+    display_name: ch.display_name,
+    thumbnail_url: ch.thumbnail_url
+  }))
+
+  results.sort((a, b) => {
+    const aLogin = a.login.toLowerCase()
+    const bLogin = b.login.toLowerCase()
+    const aDisplay = a.display_name.toLowerCase()
+    const bDisplay = b.display_name.toLowerCase()
+
+    // Exact login match wins
+    if (aLogin === q) return -1
+    if (bLogin === q) return 1
+
+    // Login starts with query
+    if (aLogin.startsWith(q) && !bLogin.startsWith(q)) return -1
+    if (bLogin.startsWith(q) && !aLogin.startsWith(q)) return 1
+
+    // Display name starts with query
+    if (aDisplay.startsWith(q) && !bDisplay.startsWith(q)) return -1
+    if (bDisplay.startsWith(q) && !aDisplay.startsWith(q)) return 1
+
+    return 0
+  })
+
+  return results.slice(0, 10)
+}
+
 export async function checkClipsExist(clipIds) {
   const existing = new Set()
   for (let i = 0; i < clipIds.length; i += 100) {

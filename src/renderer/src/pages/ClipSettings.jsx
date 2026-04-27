@@ -65,6 +65,8 @@ export default function ClipSettings() {
   const [newChannel, setNewChannel] = useState('')
   const [addingChannel, setAddingChannel] = useState(false)
   const [channelError, setChannelError] = useState(null)
+  const [suggestions, setSuggestions] = useState([])
+  const [searchLoading, setSearchLoading] = useState(false)
 
   const [overlayConfig, setOverlayConfig] = useState({
     showOverlay: true,
@@ -119,6 +121,23 @@ export default function ClipSettings() {
     window.api.channels.list().then(r => { if (r.ok) setChannels(r.data) })
   }
 
+  useEffect(() => {
+    if (!newChannel.trim()) {
+      setSuggestions([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true)
+      try {
+        const r = await window.api.channels.search(newChannel.trim())
+        if (r.ok) setSuggestions(r.data)
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [newChannel])
+
   async function addChannel() {
     if (!newChannel.trim()) return
     setAddingChannel(true)
@@ -127,6 +146,7 @@ export default function ClipSettings() {
       const r = await window.api.channels.add(newChannel.trim(), false)
       if (!r.ok) throw new Error(r.error)
       setNewChannel('')
+      setSuggestions([])
       loadChannels()
     } catch (e) {
       setChannelError(e.message)
@@ -185,14 +205,38 @@ export default function ClipSettings() {
             {channels.length === 0 && <p className="text-twitch-muted text-sm py-2">No channels yet — your channel is added automatically on login.</p>}
           </div>
           {channelError && <p className="text-red-400 text-xs mb-2">{channelError}</p>}
-          <div className="flex gap-2">
-            <input
-              className="input"
-              placeholder="Add a streamer (e.g. xqc)"
-              value={newChannel}
-              onChange={e => setNewChannel(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addChannel()}
-            />
+          <div className="flex gap-2 relative">
+            <div className="flex-1 relative">
+              <input
+                className="input w-full"
+                placeholder="Add a streamer (e.g. xqc)"
+                value={newChannel}
+                onChange={e => setNewChannel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addChannel()}
+                autoComplete="off"
+              />
+              {suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-twitch-dark border border-twitch-border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {suggestions.map(sugg => (
+                    <button
+                      key={sugg.id}
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-twitch-border/50 transition-colors text-sm flex items-center gap-2"
+                      onClick={() => {
+                        setNewChannel(sugg.login)
+                        setSuggestions([])
+                      }}
+                    >
+                      {sugg.thumbnail_url && <img src={sugg.thumbnail_url} alt="" className="w-6 h-6 rounded-full" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-twitch-text font-medium truncate">{sugg.display_name}</p>
+                        <p className="text-twitch-muted text-xs">@{sugg.login}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button className="btn-purple shrink-0 flex items-center gap-1.5" onClick={addChannel} disabled={addingChannel}>
               <Plus size={14} /> Add
             </button>

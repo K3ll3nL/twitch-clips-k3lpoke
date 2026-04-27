@@ -6,6 +6,14 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: ['obs-websocket-js', 'electron-updater', 'axios'] })]
   },
+  preload: {
+    build: {
+      lib: {
+        entry: resolve('src/preload/index.js'),
+        formats: ['cjs']
+      }
+    }
+  },
   renderer: {
     resolve: {
       alias: { '@': resolve('src/renderer/src') }

@@ -20,6 +20,7 @@ export default function App() {
   const [obsConnected, setObsConnected] = useState(false)
   const [ready, setReady] = useState(false)
   const [subscribedIds, setSubscribedIds] = useState([])
+  const { pathname } = useLocation()
 
   useEffect(() => {
     async function init() {
@@ -49,7 +50,6 @@ export default function App() {
   }
 
   const isSetup = !!twitchUser
-  const { pathname } = useLocation()
   const hidePanel = ['/settings', '/setup', '/marketplace'].includes(pathname) || pathname.startsWith('/shiny')
 
   return (

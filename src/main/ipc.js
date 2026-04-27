@@ -2,7 +2,7 @@ import { ipcMain, app } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import {
   initTwitch, getTwitchState, setClientId, startOAuthFlow, logout,
-  fetchUserByLogin, fetchClips, getClipVideoUrl, checkClipsExist
+  fetchUserByLogin, fetchClips, getClipVideoUrl, checkClipsExist, searchChannels as searchTwitchChannels
 } from './twitch.js'
 import { connectOBS, disconnectOBS, isConnected, getSceneList, addBrowserSource, switchScene, getSourceList, getSceneItemList, showDeviceInScene } from './obs.js'
 import {
@@ -215,6 +215,12 @@ export function registerIpcHandlers(mainWindow) {
   })
 
   handle('channels:remove', ({ name }) => removeChannel(name))
+
+  handle('channels:search', async ({ query }) => {
+    const state = getTwitchState()
+    if (!state.accessToken) throw new Error('Not authenticated with Twitch')
+    return searchTwitchChannels(query)
+  })
 
   // ── OBS ───────────────────────────────────────────────────────────────────
   handle('obs:connect', async ({ host, port, password }) => {

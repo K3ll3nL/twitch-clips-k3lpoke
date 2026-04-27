@@ -49,6 +49,7 @@ export const APP_REGISTRY = [
     color: '#facc15',
     gradient: 'from-yellow-400 to-amber-600',
     defaultRoute: '/shiny/devices',
+    routePrefix: '/shiny',
     core: true,
     version: '0.2.1',
     navItems: [
@@ -146,6 +147,7 @@ export function resolveSubscribedApps(subscribedIds) {
 /** Which app owns a given route path. */
 export function appForRoute(pathname) {
   for (const app of APP_REGISTRY) {
+    if (app.routePrefix && pathname.startsWith(app.routePrefix)) return app
     if (app.navItems.some(item => pathname.startsWith(item.to))) return app
     if (pathname === app.defaultRoute) return app
   }
