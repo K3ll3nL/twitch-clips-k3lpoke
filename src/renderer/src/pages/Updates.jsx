@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { RefreshCw, CheckCheck, XSquare, Check, X, ChevronDown, Eye, Volume2, Scissors, Activity, Tag } from 'lucide-react'
+import { RefreshCw, CheckCheck, XSquare, Check, X, ChevronDown, Eye, Tag } from 'lucide-react'
 import WaveformEditor from '../components/WaveformEditor'
 import TrimBar from '../components/TrimBar'
+import CollectionPicker from '../components/CollectionPicker'
+import ControlToggleButtons from '../components/ControlToggleButtons'
+import VolumeSlider from '../components/VolumeSlider'
+import { showUndo } from '../lib/undoToast'
 
 function duration(secs) {
   const m = Math.floor(secs / 60)
@@ -153,38 +157,20 @@ const ClipRow = React.memo(function ClipRow({ clip, onStatusChange, collections,
             {videoUrl && <video ref={videoRef} key={videoUrl} className="w-full h-full" controls autoPlay src={videoUrl} />}
           </div>
           <div className="px-4 py-3 border-t border-twitch-border space-y-2">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowVolume(v => !v)}
-                className={`flex items-center gap-1 text-xs shrink-0 transition-colors ${showVolume ? 'text-twitch-purple' : 'text-twitch-muted hover:text-twitch-text'}`}
-              >
-                <Volume2 size={12} /> Volume
-              </button>
-              <button
-                onClick={() => setShowTrim(v => !v)}
-                className={`flex items-center gap-1 text-xs shrink-0 transition-colors ${showTrim ? 'text-twitch-purple' : 'text-twitch-muted hover:text-twitch-text'}`}
-              >
-                <Scissors size={12} /> Trim
-              </button>
-              <button
-                onClick={() => setShowWaveform(v => !v)}
-                className={`flex items-center gap-1 text-xs shrink-0 transition-colors ${showWaveform ? 'text-twitch-purple' : 'text-twitch-muted hover:text-twitch-text'}`}
-              >
-                <Activity size={12} /> Envelope
-              </button>
-            </div>
+            <ControlToggleButtons
+              showVolume={showVolume}
+              showTrim={showTrim}
+              showWaveform={showWaveform}
+              onVolumeToggle={() => setShowVolume(v => !v)}
+              onTrimToggle={() => setShowTrim(v => !v)}
+              onWaveformToggle={() => setShowWaveform(v => !v)}
+            />
             {showVolume && (
-              <div className="flex items-center gap-3">
-                <input
-                  type="range" min="0" max="2" step="0.05"
-                  value={volume}
-                  onChange={e => setVolume(Number(e.target.value))}
-                  onMouseUp={e => saveVolume(Number(e.target.value))}
-                  onTouchEnd={() => saveVolume(volume)}
-                  className="flex-1 accent-twitch-purple"
-                />
-                <span className="text-xs text-twitch-text w-10 text-right shrink-0">{Math.round(volume * 100)}%</span>
-              </div>
+              <VolumeSlider
+                volume={volume}
+                onChange={setVolume}
+                onSave={saveVolume}
+              />
             )}
             {showTrim && (
               <TrimBar
@@ -228,15 +214,6 @@ export default function Updates() {
   // Selection
   const [selectedIds, setSelectedIds] = useState(new Set())
   const lastSelIdxRef = useRef(null)
-  const [showAddToCol, setShowAddToCol] = useState(false)
-  const addToColRef = useRef(null)
-
-  useEffect(() => {
-    if (!showAddToCol) return
-    function h(e) { if (!addToColRef.current?.contains(e.target)) setShowAddToCol(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [showAddToCol])
 
   const load = useCallback(async (since) => {
     const r = await window.api.clips.getNew(since)
@@ -254,6 +231,15 @@ export default function Updates() {
     }
     init()
     window.api.collections.list().then(r => { if (r.ok) setCollections(r.data) })
+
+    function handleClipsStatusChanged(e) {
+      const { clipId } = e.detail
+      if (e.detail.status !== 'pending') {
+        handleStatusChange(clipId)
+      }
+    }
+    window.addEventListener('clips-status-changed', handleClipsStatusChanged)
+    return () => window.removeEventListener('clips-status-changed', handleClipsStatusChanged)
   }, [load])
 
   useEffect(() => {
@@ -306,7 +292,9 @@ export default function Updates() {
   }
 
   async function markSeen() {
+    const oldLastCheck = lastCheckRef.current
     const now = new Date().toISOString()
+    const oldClips = clips
     await window.api.settings.set('lastUpdatesCheck', now)
     setLastCheck(now)
     setClips([])
@@ -314,22 +302,49 @@ export default function Updates() {
     setSelectedIds(new Set())
     setDisplayCount(20)
     lastSelIdxRef.current = null
+    showUndo('Marked as seen', async () => {
+      if (oldLastCheck !== null) {
+        await window.api.settings.set('lastUpdatesCheck', oldLastCheck)
+        setLastCheck(oldLastCheck)
+      } else {
+        await window.api.settings.set('lastUpdatesCheck', null)
+        setLastCheck(null)
+      }
+      setClips(oldClips)
+      setDisplayCount(20)
+    })
   }
 
   async function approveAll() {
     const ids = clips.map(c => c.id)
+    const oldClips = clips
     await window.api.clips.bulkApprove(ids)
     setClips([])
     setSelectedIds(new Set())
     setDisplayCount(20)
+    window.dispatchEvent(new CustomEvent('clips-status-changed', { detail: { clipIds: ids, status: 'approved' } }))
+    showUndo(`Approved ${ids.length} clip${ids.length !== 1 ? 's' : ''}`, async () => {
+      setClips(oldClips)
+      setDisplayCount(20)
+      window.api.clips.bulkSetStatus({ ids, status: 'pending' }).catch(e => console.error('Undo failed:', e))
+      window.dispatchEvent(new CustomEvent('clips-status-changed', { detail: { clipIds: ids, status: 'pending' } }))
+    })
   }
 
   async function denyAll() {
     const ids = clips.map(c => c.id)
+    const oldClips = clips
     await window.api.clips.bulkDeny(ids)
     setClips([])
     setSelectedIds(new Set())
     setDisplayCount(20)
+    window.dispatchEvent(new CustomEvent('clips-status-changed', { detail: { clipIds: ids, status: 'denied' } }))
+    showUndo(`Denied ${ids.length} clip${ids.length !== 1 ? 's' : ''}`, async () => {
+      setClips(oldClips)
+      setDisplayCount(20)
+      window.api.clips.bulkSetStatus({ ids, status: 'pending' }).catch(e => console.error('Undo failed:', e))
+      window.dispatchEvent(new CustomEvent('clips-status-changed', { detail: { clipIds: ids, status: 'pending' } }))
+    })
   }
 
   function handleStatusChange(id) {
@@ -369,12 +384,13 @@ export default function Updates() {
     lastSelIdxRef.current = null
   }
 
-  async function addSelectedToCollection(colId) {
+  async function addSelectedToCollection(colId, shouldAdd) {
     const ids = [...selectedIds]
-    await window.api.clips.bulkApprove(ids)
-    for (const id of ids) await window.api.collections.addClip(colId, id)
+    if (shouldAdd) {
+      await window.api.clips.bulkApprove(ids)
+      for (const id of ids) await window.api.collections.addClip(colId, id)
+    }
     setClips(prev => prev.filter(c => !ids.includes(c.id)))
-    setShowAddToCol(false)
     setSelectedIds(new Set())
     lastSelIdxRef.current = null
   }
@@ -456,25 +472,23 @@ export default function Updates() {
               <X size={11} /> Deny
             </button>
             {collections.length > 0 && (
-              <div className="relative" ref={addToColRef}>
-                <button
-                  onClick={() => setShowAddToCol(v => !v)}
-                  className="btn-ghost text-xs py-1 px-2.5 flex items-center gap-1"
-                >
-                  <Tag size={11} /> Add to Collection <ChevronDown size={10} />
-                </button>
-                {showAddToCol && (
-                  <div className="absolute left-0 top-full mt-1 w-48 bg-twitch-mid border border-twitch-border rounded-lg shadow-xl z-50 py-1">
-                    {collections.map(col => (
-                      <button key={col.id} onClick={() => addSelectedToCollection(col.id)}
-                        className="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-twitch-surface transition-colors">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: col.color }} />
-                        <span className="flex-1 truncate text-twitch-text">{col.name}</span>
-                      </button>
-                    ))}
-                  </div>
+              <CollectionPicker
+                mode="batch"
+                selectedIds={selectedIds}
+                onSelect={addSelectedToCollection}
+                onCollectionsChanged={() => {
+                  window.api.collections.list().then(r => { if (r.ok) setCollections(r.data) })
+                }}
+                renderTrigger={(ref, onClick) => (
+                  <button
+                    ref={ref}
+                    onClick={onClick}
+                    className="btn-ghost text-xs py-1 px-2.5 flex items-center gap-1"
+                  >
+                    <Tag size={11} /> Add to Collection <ChevronDown size={10} />
+                  </button>
                 )}
-              </div>
+              />
             )}
             <button
               onClick={() => { setSelectedIds(new Set()); lastSelIdxRef.current = null }}

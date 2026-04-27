@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react'
-import { Check, X, ChevronDown, Search, Volume2, Scissors, Activity, Tag } from 'lucide-react'
+import { Check, X, ChevronDown, Search, Tag } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import WaveformEditor, { getEnvelopeVol } from '../components/WaveformEditor'
 import TrimBar from '../components/TrimBar'
-import { showUndo } from '../lib/undoToast'
 import CollectionPicker from '../components/CollectionPicker'
+import ControlToggleButtons from '../components/ControlToggleButtons'
+import VolumeSlider from '../components/VolumeSlider'
+import { showUndo } from '../lib/undoToast'
 
 function duration(secs) {
   const m = Math.floor(secs / 60)
@@ -26,41 +28,10 @@ const ClipRow = React.memo(function ClipRow({ clip, onStatusChange, collections,
   const [trimEnd, setTrimEnd] = useState(clip.trim_end ?? clip.duration ?? 0)
   const videoRef = useRef(null)
 
-  // Collections dropdown — fixed position to escape overflow:hidden
-  const [showColMenu, setShowColMenu] = useState(false)
-  const [colMenuPos, setColMenuPos] = useState(null)
-  const tagBtnRef = useRef(null)
-  const colMenuRef = useRef(null)
-  const [showCreateCol, setShowCreateCol] = useState(false)
-
   const memberOf = useMemo(
     () => new Set((collections || []).filter(c => c.clipIds?.includes(clip.id)).map(c => c.id)),
     [collections, clip.id]
   )
-
-  useEffect(() => {
-    if (!showColMenu) return
-    function handleOutside(e) {
-      const inMenu = colMenuRef.current?.contains(e.target)
-      const inBtn  = tagBtnRef.current?.contains(e.target)
-      if (!inMenu && !inBtn) setShowColMenu(false)
-    }
-    document.addEventListener('mousedown', handleOutside)
-    return () => document.removeEventListener('mousedown', handleOutside)
-  }, [showColMenu])
-
-  function openColMenu(e) {
-    e.stopPropagation()
-    if (!tagBtnRef.current) return
-    const rect = tagBtnRef.current.getBoundingClientRect()
-    const estimated = Math.min((collections?.length ?? 0) * 38 + 48, 280)
-    const spaceBelow = window.innerHeight - rect.top
-    setColMenuPos({
-      right: window.innerWidth - rect.left + 4,
-      top: spaceBelow < estimated + 20 ? Math.max(rect.bottom - estimated, 8) : rect.top
-    })
-    setShowColMenu(v => !v)
-  }
 
   async function toggleCollection(colId) {
     if (memberOf.has(colId)) {
@@ -74,7 +45,6 @@ const ClipRow = React.memo(function ClipRow({ clip, onStatusChange, collections,
   async function handleCollectionCreated(newCol) {
     await window.api.collections.addClip(newCol.id, clip.id)
     onCollectionsChanged?.()
-    setShowCreateCol(false)
   }
 
   async function saveVolume(val) { await window.api.clips.setVolume(clip.id, val) }
@@ -257,27 +227,20 @@ const ClipRow = React.memo(function ClipRow({ clip, onStatusChange, collections,
             {videoUrl && <video ref={videoRef} key={videoUrl} className="w-full h-full" controls autoPlay src={videoUrl} />}
           </div>
           <div className="px-4 py-3 border-t border-twitch-border space-y-2">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowVolume(v => !v)} className={`flex items-center gap-1 text-xs shrink-0 transition-colors ${showVolume ? 'text-twitch-purple' : 'text-twitch-muted hover:text-twitch-text'}`}>
-                <Volume2 size={12} /> Volume
-              </button>
-              <button onClick={() => setShowTrim(v => !v)} className={`flex items-center gap-1 text-xs shrink-0 transition-colors ${showTrim ? 'text-twitch-purple' : 'text-twitch-muted hover:text-twitch-text'}`}>
-                <Scissors size={12} /> Trim
-              </button>
-              <button onClick={() => setShowWaveform(v => !v)} className={`flex items-center gap-1 text-xs shrink-0 transition-colors ${showWaveform ? 'text-twitch-purple' : 'text-twitch-muted hover:text-twitch-text'}`}>
-                <Activity size={12} /> Envelope
-              </button>
-            </div>
+            <ControlToggleButtons
+              showVolume={showVolume}
+              showTrim={showTrim}
+              showWaveform={showWaveform}
+              onVolumeToggle={() => setShowVolume(v => !v)}
+              onTrimToggle={() => setShowTrim(v => !v)}
+              onWaveformToggle={() => setShowWaveform(v => !v)}
+            />
             {showVolume && (
-              <div className="flex items-center gap-3">
-                <input type="range" min="0" max="2" step="0.05" value={volume}
-                  onChange={e => setVolume(Number(e.target.value))}
-                  onMouseUp={e => saveVolume(Number(e.target.value))}
-                  onTouchEnd={() => saveVolume(volume)}
-                  className="flex-1 accent-twitch-purple"
-                />
-                <span className="text-xs text-twitch-text w-10 text-right shrink-0">{Math.round(volume * 100)}%</span>
-              </div>
+              <VolumeSlider
+                volume={volume}
+                onChange={setVolume}
+                onSave={saveVolume}
+              />
             )}
             {showTrim && (
               <TrimBar duration={clip.duration} trimStart={trimStart} trimEnd={trimEnd}
